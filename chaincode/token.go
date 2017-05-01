@@ -10,8 +10,6 @@ import (
 type TokenChaincode struct {
 }
 
-const Standard = "Token 0.1"
-
 const KeyToken = "__token"
 const IndexBalance = "cn~balance"
 const IndexAllowance = "cn~allowance"
@@ -55,6 +53,9 @@ func (t *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	function, args := stub.GetFunctionAndParameters()
 
 	switch function {
+	case "info":
+		info, _ := stub.GetState(KeyToken)
+		return shim.Success(info)
 	case "transfer":
 		return t.transfer(stub, args)
 	case "balance":
@@ -132,6 +133,7 @@ func (t *TokenChaincode) approve(stub shim.ChaincodeStubInterface, args []string
 	}
 
 	t.setAllowance(stub, from, approve.Spender, approve.Value)
+	stub.SetEvent("Approve", []byte(args[0]))
 
 	return shim.Success(nil)
 }

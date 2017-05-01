@@ -2,13 +2,11 @@ package main
 
 import (
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/pem"
 	"errors"
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"github.com/hyperledger/fabric/protos/msp"
-	"golang.org/x/crypto/sha3"
 )
 
 func parsePEM(certPEM string) (*x509.Certificate, error) {
@@ -43,9 +41,4 @@ func CallerCN(stub shim.ChaincodeStubInterface) (string, error) {
 		return "", err
 	}
 	return cn, nil
-}
-
-func Hash(data []byte) string {
-	digest := sha3.Sum384([]byte(data))
-	return base64.StdEncoding.EncodeToString(digest[:])
 }

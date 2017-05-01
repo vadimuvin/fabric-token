@@ -22,7 +22,7 @@ func (t *TokenChaincode) balanceAsJson(stub shim.ChaincodeStubInterface, args []
 	}
 
 	balanceJson := Balance{
-		User:  args[0],
+		User:  balanceRq.User,
 		Value: balance,
 	}
 
