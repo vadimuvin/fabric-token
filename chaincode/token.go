@@ -1,10 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
-	"encoding/json"
 )
 
 type TokenChaincode struct {
@@ -67,7 +67,6 @@ func (t *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.transferFrom(stub, args)
 	}
 
-
 	return shim.Error("Incorrect function name: " + function)
 }
 
@@ -101,12 +100,12 @@ func (t *TokenChaincode) transfer(stub shim.ChaincodeStubInterface, args []strin
 		return shim.Error("Not enough balance")
 	}
 
-	if toBalance + transfer.Value < toBalance {
+	if toBalance+transfer.Value < toBalance {
 		return shim.Error("Receiver balance overflow")
 	}
 
-	err = t.setBalance(stub, from, fromBalance - transfer.Value)
-	err = t.setBalance(stub, transfer.To, toBalance + transfer.Value)
+	err = t.setBalance(stub, from, fromBalance-transfer.Value)
+	err = t.setBalance(stub, transfer.To, toBalance+transfer.Value)
 	if err != nil {
 		return shim.Error("Error setting to or from balance")
 	}
@@ -168,7 +167,7 @@ func (t *TokenChaincode) transferFrom(stub shim.ChaincodeStubInterface, args []s
 		return shim.Error("Not enough balance")
 	}
 
-	if toBalance + transfer.Value < toBalance {
+	if toBalance+transfer.Value < toBalance {
 		return shim.Error("Receiver balance overflow")
 	}
 
@@ -176,9 +175,9 @@ func (t *TokenChaincode) transferFrom(stub shim.ChaincodeStubInterface, args []s
 		return shim.Error("Spender not allowed to transfer this amount")
 	}
 
-	err = t.setBalance(stub, transfer.From, fromBalance - transfer.Value)
-	err = t.setBalance(stub, transfer.To, toBalance + transfer.Value)
-	err = t.setAllowance(stub, transfer.From, spender, allowance - transfer.Value)
+	err = t.setBalance(stub, transfer.From, fromBalance-transfer.Value)
+	err = t.setBalance(stub, transfer.To, toBalance+transfer.Value)
+	err = t.setAllowance(stub, transfer.From, spender, allowance-transfer.Value)
 	if err != nil {
 		return shim.Error("Error setting to or from balance or allowance")
 	}

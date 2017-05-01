@@ -9,17 +9,17 @@ type Token struct {
 }
 
 type Balance struct {
-    User  string `json:"user"`
-    Value uint64 `json:"value"`
+	User  string `json:"user"`
+	Value uint64 `json:"value"`
 }
 
 type Transfer struct {
-    From  string `json:"from"`
-    To    string `json:"to"`
-    Value uint64 `json:"value"`
+	From  string `json:"from"`
+	To    string `json:"to"`
+	Value uint64 `json:"value"`
 }
 
 type Approve struct {
-    Spender string `json:"spender"`
-    Value   uint64 `json:"value"`
+	Spender string `json:"spender"`
+	Value   uint64 `json:"value"`
 }
