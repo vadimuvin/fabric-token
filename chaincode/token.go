@@ -25,6 +25,7 @@ func (t *TokenChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 		return shim.Error("Expectd 1 argument")
 	}
 
+	// get token data from JSON
 	token := Token{}
 	err := json.Unmarshal([]byte(args[0]), &token)
 	if err != nil {
@@ -36,11 +37,13 @@ func (t *TokenChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 		return shim.Error("Error saving token data")
 	}
 
+	// get caller CN from his certificate
 	caller, err := CallerCN(stub)
 	if err != nil {
 		return shim.Error("Error getting caller cn")
 	}
 
+	// set the balance using a helper function
 	err = t.setBalance(stub, caller, token.TotalSupply)
 	if err != nil {
 		return shim.Error("Error setting caller balance")
@@ -52,6 +55,7 @@ func (t *TokenChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 func (t *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	function, args := stub.GetFunctionAndParameters()
 
+	// call routing
 	switch function {
 	case "info":
 		info, _ := stub.GetState(KeyToken)
@@ -87,31 +91,41 @@ func (t *TokenChaincode) transfer(stub shim.ChaincodeStubInterface, args []strin
 		return shim.Error("Error getting from data")
 	}
 
+	// to prevent "generating" tokens because of
+	// committed state reading
 	if from == transfer.To {
 		return shim.Success(nil)
 	}
 
+	// get the balances from state
 	fromBalance, err := t.balance(stub, from)
 	toBalance, err := t.balance(stub, transfer.To)
 	if err != nil {
 		return shim.Error("Error getting to or from balance")
 	}
 
+	// if (balanceOf[msg.sender] < _value) throw;
 	if fromBalance < transfer.Value {
 		return shim.Error("Not enough balance")
 	}
 
+	//if (balanceOf[_to] + _value < balanceOf[_to]) throw;
 	if toBalance+transfer.Value < toBalance {
 		return shim.Error("Receiver balance overflow")
 	}
 
+	// balanceOf[msg.sender] -= _value;
 	err = t.setBalance(stub, from, fromBalance-transfer.Value)
+	// balanceOf[_to] += _value;
 	err = t.setBalance(stub, transfer.To, toBalance+transfer.Value)
 	if err != nil {
 		return shim.Error("Error setting to or from balance")
 	}
 
-	stub.SetEvent("Transfer", []byte(args[0]))
+	transfer.From = from
+	evtData, _ := json.Marshal(transfer)
+	//Transfer(msg.sender, _to, _value);
+	stub.SetEvent("Transfer", evtData)
 
 	return shim.Success(nil)
 }
@@ -121,6 +135,7 @@ func (t *TokenChaincode) approve(stub shim.ChaincodeStubInterface, args []string
 		return shim.Error("Transfer expected 1 argument")
 	}
 
+	// get the approval data
 	approve := Approve{}
 	err := json.Unmarshal([]byte(args[0]), &approve)
 	if err != nil {
@@ -132,6 +147,7 @@ func (t *TokenChaincode) approve(stub shim.ChaincodeStubInterface, args []string
 		return shim.Error("Error getting from data")
 	}
 
+	//allowance[msg.sender][_spender] = _value;
 	t.setAllowance(stub, from, approve.Spender, approve.Value)
 	stub.SetEvent("Approve", []byte(args[0]))
 
@@ -158,6 +174,7 @@ func (t *TokenChaincode) transferFrom(stub shim.ChaincodeStubInterface, args []s
 		return shim.Success(nil)
 	}
 
+	// retrieving balances and allowances
 	fromBalance, err := t.balance(stub, transfer.From)
 	toBalance, err := t.balance(stub, transfer.To)
 	allowance, err := t.allowance(stub, transfer.From, spender)
@@ -165,18 +182,24 @@ func (t *TokenChaincode) transferFrom(stub shim.ChaincodeStubInterface, args []s
 		return shim.Error("Error getting to or from balance or allowance")
 	}
 
+	//if (balanceOf[_from] < _value) throw;
 	if fromBalance < transfer.Value {
 		return shim.Error("Not enough balance")
 	}
 
+	//if (balanceOf[_to] + _value < balanceOf[_to]) throw;
 	if toBalance+transfer.Value < toBalance {
 		return shim.Error("Receiver balance overflow")
 	}
 
+	//if (_value > allowance[_from][msg.sender]) throw;
 	if transfer.Value > allowance {
 		return shim.Error("Spender not allowed to transfer this amount")
 	}
 
+	//balanceOf[_from] -= _value;
+	//balanceOf[_to] += _value;
+	//allowance[_from][msg.sender] -= _value;
 	err = t.setBalance(stub, transfer.From, fromBalance-transfer.Value)
 	err = t.setBalance(stub, transfer.To, toBalance+transfer.Value)
 	err = t.setAllowance(stub, transfer.From, spender, allowance-transfer.Value)
@@ -184,6 +207,7 @@ func (t *TokenChaincode) transferFrom(stub shim.ChaincodeStubInterface, args []s
 		return shim.Error("Error setting to or from balance or allowance")
 	}
 
+	//Transfer(_from, _to, _value);
 	stub.SetEvent("Transfer", []byte(args[0]))
 
 	return shim.Success(nil)
